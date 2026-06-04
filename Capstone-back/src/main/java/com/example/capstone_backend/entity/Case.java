@@ -9,11 +9,8 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 @ToString
-<<<<<<< HEAD
 @Table(name = "pc_case")
-=======
-@Table(name = "`case`")
->>>>>>> 720eb41c794059b7b675e01e6db80c4178aa9b96
+
 public class Case {
 
     @Id
