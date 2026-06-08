@@ -9,4 +9,6 @@ public interface CpuRepository extends JpaRepository<Cpu,Long> {
     List<Cpu> findByPriceLessThanEqual(Long price);
 
     List<Cpu> findTop10ByPriceLessThanEqualOrderByPriceDesc(long cpuBudget);
+
+    List<Cpu> findBySocketType(String mainboardSocketType);
 }

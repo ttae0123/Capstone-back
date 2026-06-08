@@ -13,11 +13,15 @@ public class ManualBuildController {
 
     private final ManualBuildService manualBuildService;
 
-    @GetMapping("/parts/{category}")
+    @PostMapping("/parts")
     public ResponseEntity<ManualPartListResponse> getParts(
-            @PathVariable String category
+            @RequestBody ManualPartSearchRequest request
     ) {
-        ManualPartListResponse response = manualBuildService.getParts(category);
+        ManualPartListResponse response = manualBuildService.getParts(
+                request.targetCategory(),
+                request.selectedParts()
+        );
+
         return ResponseEntity.ok(response);
     }
 }

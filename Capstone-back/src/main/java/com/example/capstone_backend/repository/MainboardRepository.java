@@ -10,4 +10,6 @@ public interface MainboardRepository extends JpaRepository<Mainboard, Long>{
     List<Mainboard> findByPriceLessThanEqual(Long price);
 
     List<Mainboard> findTop10ByPriceLessThanEqualOrderByPriceDesc(long mbBudget);
+
+    List<Mainboard> findBySocketType(String cpuSocketType);
 }
