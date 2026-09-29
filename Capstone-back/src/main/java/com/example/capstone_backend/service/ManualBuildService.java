@@ -24,9 +24,14 @@ public class ManualBuildService {
     private final SsdRepository ssdRepository;
     private final PowerRepository powerRepository;
     private final CaseRepository caseRepository;
+    private final CoolerRepository coolerRepository;
 
     public ManualPartListResponse getParts(String category, ManualBuildSelection selection) {
-        String normalizedCategory = category.toLowerCase();
+        if (category == null || category.isBlank()) {
+            throw new IllegalArgumentException("부품 카테고리가 비어 있습니다.");
+        }
+
+        String normalizedCategory = category.trim().toLowerCase();
 
         if (normalizedCategory.equals("cpu")) {
             return getCpuParts(selection);
@@ -56,6 +61,10 @@ public class ManualBuildService {
             return getCaseParts(selection);
         }
 
+        if (normalizedCategory.equals("cooler")) {
+            return getCoolerParts(selection);
+        }
+
         throw new IllegalArgumentException("지원하지 않는 부품 카테고리입니다: " + category);
     }
 
@@ -67,6 +76,17 @@ public class ManualBuildService {
 
             cpus = cpus.stream()
                     .filter(cpu -> isSame(cpu.getSocketType(), selectedMainboard.getSocketType()))
+                    .toList();
+        }
+
+        if (selection != null && selection.coolerId() != null) {
+            Cooler selectedCooler = getCoolerById(selection.coolerId());
+
+            cpus = cpus.stream()
+                    .filter(cpu -> isCpuCoolerCompatible(
+                            cpu.getSocketType(),
+                            selectedCooler.getSocketType()
+                    ))
                     .toList();
         }
 
@@ -83,6 +103,10 @@ public class ManualBuildService {
                     "CPU",
                     cpu.getName(),
                     cpu.getPrice(),
+                    cpu.getBrand(),
+                    null,
+                    cpu.getProductCode(),
+                    cpu.getProductUrl(),
                     specs
             );
 
@@ -108,7 +132,10 @@ public class ManualBuildService {
 
             mainboards = mainboards.stream()
                     .filter(mainboard -> isSame(mainboard.getMemoryType(), selectedRam.getMemoryType()))
-                    .filter(mainboard -> isMemoryClockCompatible(selectedRam.getMemoryClock(), mainboard.getMemoryClock()))
+                    .filter(mainboard -> isMemoryClockCompatible(
+                            selectedRam.getMemoryClock(),
+                            mainboard.getMemoryClock()
+                    ))
                     .toList();
         }
 
@@ -116,7 +143,10 @@ public class ManualBuildService {
             Gpu selectedGpu = getGpuById(selection.gpuId());
 
             mainboards = mainboards.stream()
-                    .filter(mainboard -> isPcieCompatible(mainboard.getPcieType(), selectedGpu.getPcieType()))
+                    .filter(mainboard -> isPcieCompatible(
+                            mainboard.getPcieType(),
+                            selectedGpu.getPcieType()
+                    ))
                     .toList();
         }
 
@@ -124,7 +154,10 @@ public class ManualBuildService {
             Case selectedCase = getCaseById(selection.caseId());
 
             mainboards = mainboards.stream()
-                    .filter(mainboard -> isCaseSizeCompatible(selectedCase.getSize(), mainboard.getSize()))
+                    .filter(mainboard -> isCaseSizeCompatible(
+                            selectedCase.getSize(),
+                            mainboard.getSize()
+                    ))
                     .toList();
         }
 
@@ -143,6 +176,10 @@ public class ManualBuildService {
                     "MAINBOARD",
                     mainboard.getName(),
                     mainboard.getPrice(),
+                    mainboard.getBrand(),
+                    null,
+                    mainboard.getProductCode(),
+                    mainboard.getProductUrl(),
                     specs
             );
 
@@ -159,8 +196,14 @@ public class ManualBuildService {
             Mainboard selectedMainboard = getMainboardById(selection.mainboardId());
 
             rams = rams.stream()
-                    .filter(ram -> isSame(ram.getMemoryType(), selectedMainboard.getMemoryType()))
-                    .filter(ram -> isMemoryClockCompatible(ram.getMemoryClock(), selectedMainboard.getMemoryClock()))
+                    .filter(ram -> isSame(
+                            ram.getMemoryType(),
+                            selectedMainboard.getMemoryType()
+                    ))
+                    .filter(ram -> isMemoryClockCompatible(
+                            ram.getMemoryClock(),
+                            selectedMainboard.getMemoryClock()
+                    ))
                     .toList();
         }
 
@@ -170,6 +213,8 @@ public class ManualBuildService {
             Map<String, Object> specs = new LinkedHashMap<>();
             specs.put("memoryType", ram.getMemoryType());
             specs.put("memoryClock", ram.getMemoryClock());
+            specs.put("capacity", ram.getCapacity());
+            specs.put("moduleCount", ram.getModuleCount());
             specs.put("benchScore", ram.getBenchScore());
 
             ManualPartResponse part = new ManualPartResponse(
@@ -177,6 +222,10 @@ public class ManualBuildService {
                     "RAM",
                     ram.getName(),
                     ram.getPrice(),
+                    null,
+                    null,
+                    ram.getProductCode(),
+                    ram.getProductUrl(),
                     specs
             );
 
@@ -193,7 +242,10 @@ public class ManualBuildService {
             Mainboard selectedMainboard = getMainboardById(selection.mainboardId());
 
             gpus = gpus.stream()
-                    .filter(gpu -> isPcieCompatible(selectedMainboard.getPcieType(), gpu.getPcieType()))
+                    .filter(gpu -> isPcieCompatible(
+                            selectedMainboard.getPcieType(),
+                            gpu.getPcieType()
+                    ))
                     .toList();
         }
 
@@ -201,7 +253,10 @@ public class ManualBuildService {
             Case selectedCase = getCaseById(selection.caseId());
 
             gpus = gpus.stream()
-                    .filter(gpu -> isGpuLengthCompatible(gpu.getGpuLength(), selectedCase.getGpuLength()))
+                    .filter(gpu -> isGpuLengthCompatible(
+                            gpu.getGpuLength(),
+                            selectedCase.getGpuLength()
+                    ))
                     .toList();
         }
 
@@ -209,7 +264,10 @@ public class ManualBuildService {
             Power selectedPower = getPowerById(selection.powerId());
 
             gpus = gpus.stream()
-                    .filter(gpu -> isPowerCompatible(selectedPower.getWattage(), gpu.getRecommendedPower()))
+                    .filter(gpu -> isPowerCompatible(
+                            selectedPower.getWattage(),
+                            gpu.getRecommendedPower()
+                    ))
                     .toList();
         }
 
@@ -227,6 +285,10 @@ public class ManualBuildService {
                     "GPU",
                     gpu.getName(),
                     gpu.getPrice(),
+                    gpu.getBrand(),
+                    gpu.getChipsetBrand(),
+                    gpu.getProductCode(),
+                    gpu.getProductUrl(),
                     specs
             );
 
@@ -243,6 +305,7 @@ public class ManualBuildService {
 
         for (Ssd ssd : ssds) {
             Map<String, Object> specs = new LinkedHashMap<>();
+            specs.put("capacity", ssd.getCapacity());
             specs.put("benchScore", ssd.getBenchScore());
 
             ManualPartResponse part = new ManualPartResponse(
@@ -250,6 +313,10 @@ public class ManualBuildService {
                     "SSD",
                     ssd.getName(),
                     ssd.getPrice(),
+                    null,
+                    null,
+                    ssd.getProductCode(),
+                    ssd.getProductUrl(),
                     specs
             );
 
@@ -266,7 +333,10 @@ public class ManualBuildService {
             Gpu selectedGpu = getGpuById(selection.gpuId());
 
             powers = powers.stream()
-                    .filter(power -> isPowerCompatible(power.getWattage(), selectedGpu.getRecommendedPower()))
+                    .filter(power -> isPowerCompatible(
+                            power.getWattage(),
+                            selectedGpu.getRecommendedPower()
+                    ))
                     .toList();
         }
 
@@ -274,6 +344,7 @@ public class ManualBuildService {
 
         for (Power power : powers) {
             Map<String, Object> specs = new LinkedHashMap<>();
+            specs.put("size", power.getSize());
             specs.put("wattage", power.getWattage());
 
             ManualPartResponse part = new ManualPartResponse(
@@ -281,6 +352,10 @@ public class ManualBuildService {
                     "POWER",
                     power.getName(),
                     power.getPrice(),
+                    null,
+                    null,
+                    power.getProductCode(),
+                    power.getProductUrl(),
                     specs
             );
 
@@ -297,7 +372,10 @@ public class ManualBuildService {
             Mainboard selectedMainboard = getMainboardById(selection.mainboardId());
 
             cases = cases.stream()
-                    .filter(pcCase -> isCaseSizeCompatible(pcCase.getSize(), selectedMainboard.getSize()))
+                    .filter(pcCase -> isCaseSizeCompatible(
+                            pcCase.getSize(),
+                            selectedMainboard.getSize()
+                    ))
                     .toList();
         }
 
@@ -305,7 +383,21 @@ public class ManualBuildService {
             Gpu selectedGpu = getGpuById(selection.gpuId());
 
             cases = cases.stream()
-                    .filter(pcCase -> isGpuLengthCompatible(selectedGpu.getGpuLength(), pcCase.getGpuLength()))
+                    .filter(pcCase -> isGpuLengthCompatible(
+                            selectedGpu.getGpuLength(),
+                            pcCase.getGpuLength()
+                    ))
+                    .toList();
+        }
+
+        if (selection != null && selection.coolerId() != null) {
+            Cooler selectedCooler = getCoolerById(selection.coolerId());
+
+            cases = cases.stream()
+                    .filter(pcCase -> isCoolerHeightCompatible(
+                            selectedCooler.getCoolerLength(),
+                            pcCase.getCoolerLength()
+                    ))
                     .toList();
         }
 
@@ -322,6 +414,10 @@ public class ManualBuildService {
                     "CASE",
                     pcCase.getName(),
                     pcCase.getPrice(),
+                    null,
+                    null,
+                    pcCase.getProductCode(),
+                    pcCase.getProductUrl(),
                     specs
             );
 
@@ -331,34 +427,117 @@ public class ManualBuildService {
         return new ManualPartListResponse("case", parts.size(), parts);
     }
 
+    private ManualPartListResponse getCoolerParts(ManualBuildSelection selection) {
+        List<Cooler> coolers = coolerRepository.findAll();
+
+        if (selection != null && selection.cpuId() != null) {
+            Cpu selectedCpu = getCpuById(selection.cpuId());
+
+            coolers = coolers.stream()
+                    .filter(cooler -> isCpuCoolerCompatible(
+                            selectedCpu.getSocketType(),
+                            cooler.getSocketType()
+                    ))
+                    .toList();
+        }
+
+        if (selection != null && selection.caseId() != null) {
+            Case selectedCase = getCaseById(selection.caseId());
+
+            coolers = coolers.stream()
+                    .filter(cooler -> isCoolerHeightCompatible(
+                            cooler.getCoolerLength(),
+                            selectedCase.getCoolerLength()
+                    ))
+                    .toList();
+        }
+
+        List<ManualPartResponse> parts = new ArrayList<>();
+
+        for (Cooler cooler : coolers) {
+            Map<String, Object> specs = new LinkedHashMap<>();
+            specs.put("socketType", cooler.getSocketType());
+            specs.put("coolerLength", cooler.getCoolerLength());
+
+            ManualPartResponse part = new ManualPartResponse(
+                    cooler.getId(),
+                    "COOLER",
+                    cooler.getName(),
+                    cooler.getPrice(),
+                    null,
+                    null,
+                    cooler.getProductCode(),
+                    cooler.getProductUrl(),
+                    specs
+            );
+
+            parts.add(part);
+        }
+
+        return new ManualPartListResponse("cooler", parts.size(), parts);
+    }
+
     private Cpu getCpuById(Long cpuId) {
         return cpuRepository.findById(cpuId)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 CPU입니다. cpuId = " + cpuId));
+                .orElseThrow(() ->
+                        new IllegalArgumentException(
+                                "존재하지 않는 CPU입니다. cpuId = " + cpuId
+                        )
+                );
     }
 
     private Mainboard getMainboardById(Long mainboardId) {
         return mainboardRepository.findById(mainboardId)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 메인보드입니다. mainboardId = " + mainboardId));
+                .orElseThrow(() ->
+                        new IllegalArgumentException(
+                                "존재하지 않는 메인보드입니다. mainboardId = " + mainboardId
+                        )
+                );
     }
 
     private Ram getRamById(Long ramId) {
         return ramRepository.findById(ramId)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 RAM입니다. ramId = " + ramId));
+                .orElseThrow(() ->
+                        new IllegalArgumentException(
+                                "존재하지 않는 RAM입니다. ramId = " + ramId
+                        )
+                );
     }
 
     private Gpu getGpuById(Long gpuId) {
         return gpuRepository.findById(gpuId)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 GPU입니다. gpuId = " + gpuId));
+                .orElseThrow(() ->
+                        new IllegalArgumentException(
+                                "존재하지 않는 GPU입니다. gpuId = " + gpuId
+                        )
+                );
     }
 
     private Power getPowerById(Long powerId) {
         return powerRepository.findById(powerId)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 파워입니다. powerId = " + powerId));
+                .orElseThrow(() ->
+                        new IllegalArgumentException(
+                                "존재하지 않는 파워입니다. powerId = " + powerId
+                        )
+                );
     }
 
     private Case getCaseById(Long caseId) {
         return caseRepository.findById(caseId)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 케이스입니다. caseId = " + caseId));
+                .orElseThrow(() ->
+                        new IllegalArgumentException(
+                                "존재하지 않는 케이스입니다. caseId = " + caseId
+                        )
+                );
+    }
+
+    private Cooler getCoolerById(Long coolerId) {
+        return coolerRepository.findById(coolerId)
+                .orElseThrow(() ->
+                        new IllegalArgumentException(
+                                "존재하지 않는 쿨러입니다. coolerId = " + coolerId
+                        )
+                );
     }
 
     private boolean isSame(String value1, String value2) {
@@ -391,6 +570,89 @@ public class ManualBuildService {
         }
 
         return powerWattage >= recommendedPower;
+    }
+
+    private boolean isCoolerHeightCompatible(Long coolerLength, Long caseCoolerLength) {
+        if (coolerLength == null || caseCoolerLength == null) {
+            return true;
+        }
+
+        return caseCoolerLength >= coolerLength;
+    }
+
+    private boolean isCpuCoolerCompatible(String cpuSocketType, String coolerSocketType) {
+        if (cpuSocketType == null || coolerSocketType == null) {
+            return false;
+        }
+
+        String cpuSocket = normalizeSocket(cpuSocketType);
+        String coolerSocket = normalizeSocket(coolerSocketType);
+
+        if (cpuSocket.isBlank() || coolerSocket.isBlank()) {
+            return false;
+        }
+
+        if (coolerSocket.contains(cpuSocket) || cpuSocket.contains(coolerSocket)) {
+            return true;
+        }
+
+        if (isIntel115xCompatible(cpuSocket, coolerSocket)) {
+            return true;
+        }
+
+        return isAmdSocketCompatible(cpuSocket, coolerSocket);
+    }
+
+    private boolean isIntel115xCompatible(String cpuSocket, String coolerSocket) {
+        boolean cpuIs115x =
+                cpuSocket.equals("1150")
+                        || cpuSocket.equals("1151")
+                        || cpuSocket.equals("1151V2")
+                        || cpuSocket.equals("1155")
+                        || cpuSocket.equals("1156");
+
+        boolean coolerSupports115x =
+                coolerSocket.contains("115X")
+                        || coolerSocket.contains("1150")
+                        || coolerSocket.contains("1151")
+                        || coolerSocket.contains("1151V2")
+                        || coolerSocket.contains("1155")
+                        || coolerSocket.contains("1156");
+
+        return cpuIs115x && coolerSupports115x;
+    }
+
+    private boolean isAmdSocketCompatible(String cpuSocket, String coolerSocket) {
+        if (cpuSocket.equals("AMD4")) {
+            return coolerSocket.contains("AM4")
+                    || coolerSocket.contains("AMD4");
+        }
+
+        if (cpuSocket.equals("AMD5")) {
+            return coolerSocket.contains("AM5")
+                    || coolerSocket.contains("AMD5");
+        }
+
+        return false;
+    }
+
+    private String normalizeSocket(String value) {
+        if (value == null) {
+            return "";
+        }
+
+        return value
+                .trim()
+                .toUpperCase()
+                .replace(" ", "")
+                .replace("-", "")
+                .replace("_", "")
+                .replace("소켓", "")
+                .replace("지원", "")
+                .replace("INTEL", "")
+                .replace("인텔", "")
+                .replace("LGA", "")
+                .replace("SOCKET", "");
     }
 
     private boolean isPcieCompatible(String mainboardPcieType, String gpuPcieType) {

@@ -22,12 +22,24 @@ public class Ram {
     @Column(nullable = false)
     private Long price;
 
-    @Column(name = "memory_type", columnDefinition = "TEXT")
+    @Column(name = "memory_type", nullable = false, columnDefinition = "TEXT")
     private String memoryType;
 
-    @Column(name = "memory_clock")
+    @Column(name = "memory_clock", nullable = false)
     private Long memoryClock;
 
-    @Column(name = "bench_score")
-    private Long benchScore;
+    @Column(nullable = false)
+    private Long capacity;
+
+    @Column(name = "module_count", nullable = false)
+    private Long moduleCount;
+
+    @Column(name = "bench_score", nullable = false)
+    private Double benchScore;
+
+    @Column(name = "product_code", nullable = false)
+    private Long productCode;
+
+    @Column(name = "product_url", nullable = false, columnDefinition = "TEXT")
+    private String productUrl;
 }

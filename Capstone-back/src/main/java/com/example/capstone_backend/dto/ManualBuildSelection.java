@@ -7,6 +7,7 @@ public record ManualBuildSelection(
         Long gpuId,
         Long ssdId,
         Long powerId,
-        Long caseId
+        Long caseId,
+        Long coolerId
 ) {
 }

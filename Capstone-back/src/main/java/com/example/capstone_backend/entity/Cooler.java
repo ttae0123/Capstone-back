@@ -28,4 +28,10 @@ public class Cooler {
 
     @Column(name = "cooler_length")
     private Long coolerLength;
+
+    @Column(name = "product_code", nullable = false)
+    private Long productCode;
+
+    @Column(name = "product_url", nullable = false, columnDefinition = "TEXT")
+    private String productUrl;
 }

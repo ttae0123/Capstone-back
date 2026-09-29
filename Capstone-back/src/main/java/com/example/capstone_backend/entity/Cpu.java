@@ -32,4 +32,13 @@ public class Cpu {
     @Column(name = "bench_score")
     private Long benchScore;
 
+    @Column(nullable = false)
+    private String brand;
+
+    @Column(name = "product_code", nullable = false)
+    private Long productCode;
+
+    @Column(name = "product_url", nullable = false, columnDefinition = "TEXT")
+    private String productUrl;
+
 }

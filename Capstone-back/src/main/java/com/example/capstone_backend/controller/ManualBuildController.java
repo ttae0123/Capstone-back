@@ -22,6 +22,6 @@ public class ManualBuildController {
                 request.selectedParts()
         );
 
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(response); 
     }
 }
